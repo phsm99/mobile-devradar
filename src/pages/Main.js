@@ -1,14 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, Image, View, Text, TextInput, TouchableOpacity, ActivityIndicator } from "react-native";
+import { StyleSheet, Image, View, Text, TextInput, TouchableOpacity, ActivityIndicator, Alert } from "react-native";
 import MapView, { Marker, Callout } from 'react-native-maps';
 import { requestPermissionsAsync, getCurrentPositionAsync } from "expo-location";
 import { MaterialIcons } from '@expo/vector-icons';
+import * as LocalAuthentication from 'expo-local-authentication';
 
 import api from "../services/api";
 import { connect, disconnect, subscribeToNewDevs } from '../services/socket';
 
 function Main({ navigation }) {
     const [devs, setDevs] = useState([]);
+    const [logged, setLogged] = useState(false);
     const [currentRegion, setCurrentRegion] = useState(null);
     const [techs, setTechs] = useState('');
     useEffect(() => {
@@ -58,9 +60,47 @@ function Main({ navigation }) {
         setupWebSocket();
     }
 
+    function autenticacao() {
+        LocalAuthentication.hasHardwareAsync()
+            .then(hasHardware => {
+                if (hasHardware) {
+                    LocalAuthentication.isEnrolledAsync()
+                        .then(isEnrolled => {
+                            if (isEnrolled) {
+                                LocalAuthentication.supportedAuthenticationTypesAsync()
+                                    .then(supportedAuthenticationTypes => {
+                                        if (supportedAuthenticationTypes) {
+                                            LocalAuthentication.authenticateAsync({
+                                                promptMessage: "Desbloqueie para usar o app",
+                                                fallbackLabel: ""
+                                            })
+                                                .then(authenticateAsync => {
+                                                    if (authenticateAsync.success) {
+                                                        setLogged(true);
+                                                    }
+                                                })
+                                        }
+                                    })
+                            }
+                        })
+                }
+            });
+    }
+
     function handleRegionChanged(region) {
         setCurrentRegion(region);
     }
+
+    if (!logged) {
+        autenticacao();
+        return (<View style={[styles.container, styles.horizontal]}>
+            <Text style={{ flex: 1, justifyContent: "center", alignContent: "center" }}>Faça login para utilizar o app</Text>
+            <TouchableOpacity onPress={() => { autenticacao() }} style={styles.loginButton}>
+                <Text style={styles.textLogin}>Login</Text>
+            </TouchableOpacity>
+        </View>);
+    }
+
     if (!currentRegion) {
 
         return (
@@ -172,6 +212,18 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         marginLeft: 15,
+    },
+    loginButton: {
+        flex: 1,
+        height: 50,
+        backgroundColor: '#8e4Dff',
+        borderRadius: 25,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginLeft: 15,
+    },
+    textLogin: {
+        color: "#ffffff"
     },
     container: {
         flex: 1,

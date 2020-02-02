@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, TextInput, TouchableOpacity, StyleSheet, Text, ActivityIndicator, Alert } from 'react-native';
+import { View, TextInput, TouchableOpacity, StyleSheet, Text, ActivityIndicator, Alert, Vibration } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import api from "../services/api";
 
@@ -8,7 +8,7 @@ function CreateDev({ navigation }) {
     const [gitUser, setgitUser] = useState('');
     const [techs, setTechs] = useState('');
     const [load, setLoad] = useState(false);
-
+    
     async function storeDev() {
 
         try {
@@ -39,12 +39,14 @@ function CreateDev({ navigation }) {
 
             if (res.status == 200) {
                 alertSucesso();
+                Vibration.vibrate(1000);
+                navigation.goBack();
             }
             else {
                 alertFalha();
             }
         } catch (error) {
-            alertFalha();
+            alertFalha(error);
         }
         finally {
             setLoad(false);
@@ -63,10 +65,10 @@ function CreateDev({ navigation }) {
         );
     }
 
-    function alertFalha() {
+    function alertFalha(error) {
         Alert.alert(
             'CADASTRAR DEV',
-            'Erro ao cadastrar DEV ',
+            error ? error.toString() : 'Erro ao cadastrar DEV ',
             [
                 { text: 'OK' },
             ],
