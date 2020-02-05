@@ -15,7 +15,7 @@ function Main({ navigation }) {
     const [techs, setTechs] = useState('');
     const [load, setLoad] = useState(false);
 
-
+ 
     useEffect(() => {
         async function loadInitialPositiion() {
             const { granted } = await requestPermissionsAsync();
