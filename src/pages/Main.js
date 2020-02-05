@@ -13,6 +13,9 @@ function Main({ navigation }) {
     const [logged, setLogged] = useState(false);
     const [currentRegion, setCurrentRegion] = useState(null);
     const [techs, setTechs] = useState('');
+    const [load, setLoad] = useState(false);
+
+
     useEffect(() => {
         async function loadInitialPositiion() {
             const { granted } = await requestPermissionsAsync();
@@ -47,6 +50,7 @@ function Main({ navigation }) {
         connect(latitude, longitude, techs);
     }
     async function loadDevs() {
+        setLoad(true);
         const { latitude, longitude } = currentRegion;
         const response = await api.get('/search', {
             params: {
@@ -58,6 +62,8 @@ function Main({ navigation }) {
 
         setDevs(response.data.devs);
         setupWebSocket();
+
+        setLoad(false);
     }
 
     function autenticacao() {
@@ -149,6 +155,10 @@ function Main({ navigation }) {
                     <MaterialIcons name="add" size={30} color="#FFF" />
                 </TouchableOpacity>
             </View>
+
+            <View style={[styles.loading, { opacity: load ? 0.6 : 0 }]}>
+                <ActivityIndicator size="large" color="#7D40E7" />
+            </View>
         </>
     )
 }
@@ -239,7 +249,15 @@ const styles = StyleSheet.create({
         position: 'absolute',
         bottom: 20,
         right: 20
-    }
+    },
+    loading: {
+        backgroundColor: '#9e9e9d',
+        position: 'absolute',
+        zIndex: 5,
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
 })
 
 export default Main;
