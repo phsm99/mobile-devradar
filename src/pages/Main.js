@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, Image, View, Text, TextInput, TouchableOpacity, ActivityIndicator, Alert } from "react-native";
+import { StyleSheet, Image, View, Text, TextInput, TouchableOpacity, ActivityIndicator, Platform, Modal } from "react-native";
 import MapView, { Marker, Callout } from 'react-native-maps';
 import { requestPermissionsAsync, getCurrentPositionAsync } from "expo-location";
 import { MaterialIcons } from '@expo/vector-icons';
@@ -14,8 +14,9 @@ function Main({ navigation }) {
     const [currentRegion, setCurrentRegion] = useState(null);
     const [techs, setTechs] = useState('');
     const [load, setLoad] = useState(false);
+    const [modalVisible, setModalVisible] = useState(false)
 
- 
+
     useEffect(() => {
         async function loadInitialPositiion() {
             const { granted } = await requestPermissionsAsync();
@@ -66,6 +67,18 @@ function Main({ navigation }) {
         setLoad(false);
     }
 
+    scanFingerPrint = async () => {
+        try {
+            let results = await LocalAuthentication.authenticateAsync();
+            if (results.success) {
+                setLogged(true);
+                setModalVisible(false);
+            }
+        } catch (e) {
+            console.log(e);
+        }
+    };
+
     function autenticacao() {
         LocalAuthentication.hasHardwareAsync()
             .then(hasHardware => {
@@ -76,15 +89,20 @@ function Main({ navigation }) {
                                 LocalAuthentication.supportedAuthenticationTypesAsync()
                                     .then(supportedAuthenticationTypes => {
                                         if (supportedAuthenticationTypes) {
-                                            LocalAuthentication.authenticateAsync({
-                                                promptMessage: "Desbloqueie para usar o app",
-                                                fallbackLabel: ""
-                                            })
-                                                .then(authenticateAsync => {
-                                                    if (authenticateAsync.success) {
-                                                        setLogged(true);
-                                                    }
+
+                                            if (Platform.OS === 'android') {
+                                                setModalVisible(true);
+                                            } else {
+                                                LocalAuthentication.authenticateAsync({
+                                                    promptMessage: "Desbloqueie para usar o app",
+                                                    fallbackLabel: ""
                                                 })
+                                                    .then(authenticateAsync => {
+                                                        if (authenticateAsync.success) {
+                                                            setLogged(true);
+                                                        }
+                                                    })
+                                            }
                                         }
                                     })
                             }
@@ -98,13 +116,39 @@ function Main({ navigation }) {
     }
 
     if (!logged) {
-        autenticacao();
-        return (<View style={[styles.container, styles.horizontal]}>
-            <Text style={{ flex: 1, justifyContent: "center", alignContent: "center" }}>Faça login para utilizar o app</Text>
-            <TouchableOpacity onPress={() => { autenticacao() }} style={styles.loginButton}>
-                <Text style={styles.textLogin}>Login</Text>
-            </TouchableOpacity>
-        </View>);
+        return (
+            <View>
+                <View style={[styles.container, styles.horizontal]}>
+                    <Text style={{ flex: 1, justifyContent: "center", alignContent: "center" }}>Faça login para utilizar o app</Text>
+                    <TouchableOpacity onPress={() => { autenticacao() }} style={styles.loginButton}>
+                        <Text style={styles.textLogin}>Login</Text>
+                    </TouchableOpacity>
+                </View>
+
+                <Modal
+                    animationType="slide"
+                    transparent={true}
+                    visible={modalVisible}
+                    onShow={scanFingerPrint}>
+                    <View style={styles.modal}>
+                        <View style={styles.innerContainer}>
+                            <Text>Sign in with fingerprint</Text>
+                            <Image
+                                style={{ width: 128, height: 128 }}
+                                source={require('../../assets/fingerprint.png')}
+                            />
+                            <TouchableOpacity
+                                onPress={async () => {
+                                    LocalAuthentication.cancelAuthenticate();
+                                    setModalVisible(false);
+                                }}>
+                                <Text style={{ color: 'red', fontSize: 16 }}>Cancel</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </Modal>
+            </View>
+        );
     }
 
     if (!currentRegion) {
@@ -254,6 +298,19 @@ const styles = StyleSheet.create({
         backgroundColor: '#9e9e9d',
         position: 'absolute',
         zIndex: 5,
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    modal: {
+        flex: 1,
+        marginTop: '90%',
+        backgroundColor: '#E5E5E5',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    innerContainer: {
+        marginTop: '30%',
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
